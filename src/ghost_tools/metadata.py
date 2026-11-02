@@ -28,6 +28,6 @@ def inspect_image(path: Path) -> ScanResult:
                     findings.append(assess_field(str(name), value))
             if not findings:
                 warnings.append("No readable EXIF metadata found; this is not proof of privacy.")
-    except (UnidentifiedImageError, OSError, ValueError) as exc:
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
         raise ValueError(f"Cannot inspect this image: {exc}") from exc
     return ScanResult(str(path), findings, warnings)

@@ -12,7 +12,7 @@ Download `GHOST-TOOLS-windows-x64.zip` from [Releases](https://github.com/Squeee
 
 Extract the **entire ZIP**, open the `GHOST-TOOLS` folder and double-click `GHOST-TOOLS.exe`. Keep `_internal` beside the EXE; this portable distribution requires no Python installation or terminal. Windows x64 is the build target. Builds are unsigned; no publisher signature is claimed.
 
-The desktop offers a sidebar, file/folder drag-and-drop, background processing, color-coded findings with explanations, JSON export, hash comparison and hidden password input. It starts with no fabricated analysis results. Reports are held in memory until explicitly exported, exclude passwords, and cannot overwrite inspected source paths. Explicit clipboard actions use the system clipboard, whose history may retain copied material.
+The desktop offers a sidebar, file/folder drag-and-drop, background processing, color-coded findings with explanations, JSON export, hash comparison and hidden password input. It starts with no fabricated analysis results. Reports are held in memory until explicitly exported and exclude passwords. GUI and CLI exports protect inspected source paths, including symlink/hard-link aliases; report writes replace the destination atomically. Switching modules or a failed analysis clears the previous result. Explicit clipboard actions use the system clipboard, whose history may retain copied material.
 
 While an operation runs, navigation and close are held until it completes. DNS duration is controlled by the operating system resolver; folder scans are bounded by the selected image limit but can still take time on large trees. No cancellation or progress percentage is claimed.
 
@@ -83,7 +83,7 @@ Use `python -m ghost_tools` as an alternative after installation.
 - Reports may include sensitive metadata, including identifying information. Review before sharing.
 - Not all metadata formats or file types are supported. No finding ≠ proof of privacy.
 - The inspector reads top-level EXIF and detects GPS presence; it does not comprehensively decode nested camera EXIF, XMP, IPTC, documents or all metadata. Risk labels describe disclosure potential, not malware detection.
-- Directory scans skip symlink/junction directories and report traversal/read errors. Reaching the configured image limit may leave additional images uninspected.
+- Directory scans reject linked scan roots, skip symlink/Windows reparse-point directories (including junctions on Python 3.10), and report traversal/read errors. Reaching the configured image limit may leave additional images uninspected.
 - DNS commands require a network connection and may disclose queried hostnames to your configured resolver.
 - Only scan data and systems you own or are permitted to inspect.
 

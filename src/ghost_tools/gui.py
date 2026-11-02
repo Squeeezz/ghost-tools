@@ -15,10 +15,10 @@ from PySide6.QtWidgets import (
 )
 
 from . import __version__
-from .core import export_json
+from .core import export_json, validate_report_destination
 from .credentials import analyze_password, generate_password
 from .footprint import scan_directory
-from .hashing import sha256_file
+from .hashing import sha256_file, validate_sha256
 from .metadata import inspect_image
 from .network import lookup_dns
 
@@ -241,6 +241,14 @@ class Window(QMainWindow):
     def navigate(self, index):
         self.stack.setCurrentIndex(index)
         self.title.setText(self.names[index])
+        self.clear_result()
+        self.status.setText('Ready — ' + self.names[index])
+
+    def clear_result(self):
+        self.report = None
+        self.copy.setEnabled(False)
+        self.export.setEnabled(False)
+        self.table.setRowCount(0)
 
     def start(self, task, paths=()):
         if self.job is not None:
@@ -270,6 +278,7 @@ class Window(QMainWindow):
         self.progress.setValue(1)
 
     def show_error(self, message):
+        self.clear_result()
         self.status.setText('Failed — ' + message)
 
     def show_result(self, result):
@@ -303,13 +312,11 @@ class Window(QMainWindow):
         path = Path(self.file.text())
         expected = self.expected.text().strip()
         def task():
+            trusted = validate_sha256(expected) if expected else None
             digest = sha256_file(path)
             signal = 'INFO'
-            if expected:
-                # Validate via the existing API; reuse the computed digest for comparison.
-                if len(expected) != 64 or any(c not in '0123456789abcdefABCDEF' for c in expected):
-                    raise ValueError('Expected SHA-256 must be exactly 64 hexadecimal characters')
-                signal = 'MATCH' if digest.lower() == expected.lower() else 'MISMATCH'
+            if trusted is not None:
+                signal = 'MATCH' if digest == trusted else 'MISMATCH'
             return {'module':'hash', 'summary':f'SHA-256 complete — {signal}.', 'rows':[[str(path), digest, signal, 'Compare with a checksum from a trusted source.']], 'expected':expected or None}
         self.start(task, [path])
 
@@ -352,16 +359,18 @@ class Window(QMainWindow):
         filename, _ = QFileDialog.getSaveFileName(self, 'Export report', 'ghost-report.json', 'JSON (*.json)')
         if not filename:
             return
-        destination = Path(filename).resolve()
-        sources = self.source_paths + [Path(r['filename']).resolve() for r in self.report.get('files', [])]
-        if destination in sources:
-            QMessageBox.warning(self, 'Choose another destination', 'A report cannot overwrite an inspected source file or folder.')
+        destination = Path(filename)
+        sources = self.source_paths + [Path(r['filename']) for r in self.report.get('files', [])]
+        try:
+            validate_report_destination(destination, sources)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, 'Choose another destination', str(exc))
             return
         try:
-            export_json(self.report, destination)
+            export_json(self.report, destination, protected_paths=sources)
             self.status.setText(f'Report saved: {destination}')
         except (OSError, ValueError) as exc:
-            self.show_error(str(exc))
+            self.status.setText(f'Export failed — {exc}')
 
     def closeEvent(self, event):
         if self.job is not None:

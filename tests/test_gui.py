@@ -109,3 +109,47 @@ def test_empty_folder_requires_explicit_selection(window):
     assert window.job is None
     assert 'Choose a folder' in window.status.text()
 
+
+def test_invalid_scan_discards_previous_report(window):
+    window.generate()
+    assert window.report is not None
+    window.scan()
+    assert window.report is None
+    assert not window.export.isEnabled()
+    assert not window.copy.isEnabled()
+    assert window.table.rowCount() == 0
+
+
+def test_switching_modules_clears_previous_module_result(window):
+    window.generate()
+    window.nav.setCurrentRow(4)
+    assert window.report is None
+    assert window.table.rowCount() == 0
+    assert not window.export.isEnabled()
+
+
+def test_gui_rejects_hardlink_to_hashed_source(window, tmp_path, monkeypatch, hardlink):
+    source = tmp_path / 'source.txt'
+    source.write_bytes(b'preserve me')
+    alias = tmp_path / 'report.json'
+    hardlink(source, alias)
+    window.file.setText(str(source))
+    window.hash_file()
+    complete(window)
+    monkeypatch.setattr(QFileDialog, 'getSaveFileName', lambda *args: (str(alias), ''))
+    warnings = []
+    monkeypatch.setattr(QMessageBox, 'warning', lambda *args: warnings.append(args))
+    window.export_report()
+    assert warnings
+    assert source.read_bytes() == alias.read_bytes() == b'preserve me'
+
+
+def test_invalid_expected_digest_does_not_read_file(window, monkeypatch):
+    def forbidden(*args):
+        raise AssertionError('File was read despite an invalid expected checksum')
+    monkeypatch.setattr('ghost_tools.gui.sha256_file', forbidden)
+    window.expected.setText('invalid')
+    window.hash_file()
+    complete(window)
+    assert '64 hexadecimal' in window.status.text()
+

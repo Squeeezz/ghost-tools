@@ -13,7 +13,13 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def verify_sha256(path: Path, expected: str) -> bool:
+def validate_sha256(expected: str) -> str:
+    """Validate before file IO and return the normalized trusted digest."""
     if len(expected) != 64 or any(c not in "0123456789abcdefABCDEF" for c in expected):
         raise ValueError("Expected SHA-256 must be exactly 64 hexadecimal characters")
-    return sha256_file(path).lower() == expected.lower()
+    return expected.lower()
+
+
+def verify_sha256(path: Path, expected: str) -> bool:
+    expected = validate_sha256(expected)
+    return sha256_file(path) == expected

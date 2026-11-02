@@ -9,6 +9,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
 from . import __version__
 from .core import ScanResult, export_json
@@ -30,18 +31,18 @@ console = Console()
 
 
 def show_report(report: ScanResult) -> None:
-    console.print(Panel.fit(f"[bold green]{report.filename}[/bold green]", title="LOCAL FILE SCAN"))
+    console.print(Panel.fit(Text(report.filename, style="bold green"), title="LOCAL FILE SCAN"))
     table = Table("Field", "Value", "Signal", show_lines=True)
     for item in report.findings:
-        table.add_row(item.field, item.value, item.severity)
+        table.add_row(Text(item.field), Text(item.value), Text(item.severity))
     console.print(table)
     for warning in report.warnings:
-        console.print(f"[yellow]! {warning}[/yellow]")
+        console.print(f"! {warning}", style="yellow", markup=False)
     console.print("[dim]Risk labels are informational, not guarantees of security.[/dim]")
 
 
 def failure(error: Exception) -> None:
-    console.print(f"[red]Error:[/red] {error}")
+    console.print(f"Error: {error}", style="red", markup=False)
     raise typer.Exit(code=1)
 
 
@@ -61,8 +62,8 @@ def metadata_inspect(path: Path, output: Optional[Path] = typer.Option(None, "--
         result = inspect_image(path)
         show_report(result)
         if output is not None:
-            export_json(result.to_dict(), output)
-            console.print(f"Report saved: {output}")
+            export_json(result.to_dict(), output, protected_paths=[path])
+            console.print(f"Report saved: {output}", markup=False)
     except (OSError, ValueError) as exc:
         failure(exc)
 
@@ -71,7 +72,7 @@ def metadata_inspect(path: Path, output: Optional[Path] = typer.Option(None, "--
 def hash_calculate(path: Path) -> None:
     """Compute a SHA-256 file checksum."""
     try:
-        console.print(f"[green]SHA-256[/green] {sha256_file(path)}  {path}")
+        console.print(f"SHA-256 {sha256_file(path)}  {path}", markup=False)
     except OSError as exc:
         failure(exc)
 
@@ -129,11 +130,16 @@ def footprint_scan(directory: Path, limit: int = typer.Option(100, min=1, max=10
         results = scan_directory(directory, limit)
         for report in results:
             flagged = sum(f.severity in {"HIGH", "MEDIUM"} for f in report.findings)
-            console.print(f"{report.filename}: {flagged} flagged field(s)")
-        console.print(f"[green]Inspected {len(results)} image(s).[/green]")
+            console.print(f"{report.filename}: {flagged} flagged field(s)", markup=False)
+            for warning in report.warnings:
+                console.print(f"Warning: {warning}", markup=False)
+        console.print(f"Produced {len(results)} report(s); review warnings for skipped files.")
+        if len(results) >= limit:
+            console.print("Scan limit may have been reached; additional images may remain.")
         if output is not None:
-            export_json({"directory": str(directory), "files": [r.to_dict() for r in results]}, output)
-            console.print(f"Report saved: {output}")
+            export_json({"directory": str(directory), "files": [r.to_dict() for r in results]},
+                        output, protected_paths=[directory, *(Path(r.filename) for r in results)])
+            console.print(f"Report saved: {output}", markup=False)
     except (OSError, ValueError) as exc:
         failure(exc)
 
