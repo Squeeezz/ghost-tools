@@ -2,9 +2,32 @@
 
 **KNOW YOUR EXPOSURE.**
 
-A minimal, local-first Python CLI toolkit for inspecting image metadata, verifying file hashes, creating passwords and understanding basic digital privacy exposure.
+A native dark Windows desktop workspace and Python CLI for inspecting image metadata, verifying file hashes, creating passwords and understanding basic digital privacy exposure.
 
-> **Alpha 0.1.0:** Educational software. It cannot guarantee security or anonymity. It never uploads file contents. DNS lookups intentionally use the configured system resolver and therefore may create network traffic.
+> **Desktop 0.2.0:** Educational software. It cannot guarantee security or anonymity. It never uploads file contents. DNS lookups intentionally use the configured system resolver and therefore may create network traffic.
+
+## Windows desktop — no Python required
+
+Download `GHOST-TOOLS-windows-x64.zip` from [Releases](https://github.com/Squeeezz/ghost-tools/releases) when a tagged release is available, or from the successful [Windows desktop workflow](https://github.com/Squeeezz/ghost-tools/actions/workflows/windows.yml) artifact for the development branch (GitHub login required for workflow artifacts).
+
+Extract the **entire ZIP**, open the `GHOST-TOOLS` folder and double-click `GHOST-TOOLS.exe`. Keep `_internal` beside the EXE; this portable distribution requires no Python installation or terminal. Windows x64 is the build target. Builds are unsigned; no publisher signature is claimed.
+
+The desktop offers a sidebar, file/folder drag-and-drop, background processing, color-coded findings with explanations, JSON export, hash comparison and hidden password input. It starts with no fabricated analysis results. Reports are held in memory until explicitly exported, exclude passwords, and cannot overwrite inspected source paths. Explicit clipboard actions use the system clipboard, whose history may retain copied material.
+
+While an operation runs, navigation and close are held until it completes. DNS duration is controlled by the operating system resolver; folder scans are bounded by the selected image limit but can still take time on large trees. No cancellation or progress percentage is claimed.
+
+## Desktop development and Windows packaging
+
+```powershell
+python -m pip install -e ".[desktop,dev,build]"
+ghost-desktop
+python -m pytest -q
+python -m PyInstaller --noconfirm --clean GHOST-TOOLS.spec
+```
+
+`python -m ghost_tools.gui` is an alternative desktop entry point. The CLI remains available without installing the desktop extra. GUI tests skip when Qt is absent; Windows CI installs Qt and runs them, bundles the app and smoke-tests the actual EXE. On branch pushes and PRs it uploads a portable ZIP plus SHA-256 checksum for 30 days. Pushing a `v*` tag builds and publishes those assets to GitHub Releases after successful checks. Build Windows distributions on Windows.
+
+Qt/PySide6 remains dynamically linked in the portable folder. See [third-party notices](THIRD-PARTY-NOTICES.md) for licenses and source locations.
 
 ## Features
 
@@ -59,6 +82,8 @@ Use `python -m ghost_tools` as an alternative after installation.
 - Password checks use hidden interactive input and don't store passwords. Generated passwords are printed to terminal scrollback; handle them carefully.
 - Reports may include sensitive metadata, including identifying information. Review before sharing.
 - Not all metadata formats or file types are supported. No finding ≠ proof of privacy.
+- The inspector reads top-level EXIF and detects GPS presence; it does not comprehensively decode nested camera EXIF, XMP, IPTC, documents or all metadata. Risk labels describe disclosure potential, not malware detection.
+- Directory scans skip symlink/junction directories and report traversal/read errors. Reaching the configured image limit may leave additional images uninspected.
 - DNS commands require a network connection and may disclose queried hostnames to your configured resolver.
 - Only scan data and systems you own or are permitted to inspect.
 
@@ -77,6 +102,7 @@ pytest -q
 - [x] Local password tools
 - [x] DNS diagnostics
 - [x] Directory metadata scanning and JSON export
+- [x] Native PySide6 desktop and portable Windows build workflow
 - [ ] Broader metadata support via ExifTool
 - [ ] More advanced contextual privacy analysis
 - [ ] Optional safe metadata stripping on **copies**

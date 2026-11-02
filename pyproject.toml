@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ghost-opsec-tools"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local-first privacy and security toolkit"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,10 +13,15 @@ authors = [{name = "Squeeezz"}]
 dependencies = ["typer>=0.12,<1", "rich>=13,<15", "Pillow>=10,<13"]
 
 [project.optional-dependencies]
+desktop = ["PySide6-Essentials>=6.8,<6.11"]
+build = ["pyinstaller>=6.11,<7"]
 dev = ["pytest>=8,<10", "ruff>=0.6"]
 
 [project.scripts]
 ghost = "ghost_tools.cli:app"
+
+[project.gui-scripts]
+ghost-desktop = "ghost_tools.gui:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ghost_tools"]
