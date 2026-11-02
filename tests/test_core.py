@@ -1,5 +1,4 @@
 import hashlib
-from pathlib import Path
 from PIL import Image
 from ghost_tools.hashing import sha256_file, verify_sha256
 from ghost_tools.credentials import analyze_password, generate_password
